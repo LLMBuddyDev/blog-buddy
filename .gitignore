@@ -1,0 +1,26 @@
+# OS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.python-version
+
+# Envs
+.env
+venv/
+.venv/
+
+# Editors/IDEs
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Streamlit secrets (do NOT commit real secrets)
+.streamlit/secrets.toml
+

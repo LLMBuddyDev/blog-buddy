@@ -1,0 +1,36 @@
+{
+  "blockchain": [
+    "https://www.cisa.gov/resources-tools/resources/blockchain-security-guidance",
+    "https://www.ibm.com/topics/blockchain-security"
+  ],
+  "zero trust": [
+    "https://www.nist.gov/publications/zero-trust-architecture",
+    "https://www.csoonline.com/article/3562607/what-is-zero-trust.html"
+  ],
+  "malware": [
+    "https://attack.mitre.org/tactics/TA0005/",
+    "https://www.cisa.gov/news-events/news/stopransomware"
+  ],
+  "supply chain": [
+    "https://fedscoop.com/updated-nist-cybersecurity-framework-adds-core-function-focuses-on-supply-chain-risk-management/",
+    "https://www.cisa.gov/sites/default/files/publications/ict_scrm_essentials_508.pdf"
+  ],
+  "image corruption": [
+    "https://fedscoop.com/updated-nist-cybersecurity-framework-adds-core-function-focuses-on-supply-chain-risk-management/"
+  ],
+  "TEEs": [
+    "https://fedscoop.com/updated-nist-cybersecurity-framework-adds-core-function-focuses-on-supply-chain-risk-management/",
+    "https://www.fr0ntierx.com/10-25-2024"
+  ],
+  "ransomware": [
+    "https://www.nist.gov/itl/smallbusinesscyber/guidance-topic/ransomware",
+    "https://www.fr0ntierx.com/3-4-2025"
+  ],
+  "confidential computing": [
+    "https://confidentialcomputing.io/about/",
+    "https://www.ibm.com/think/topics/confidential-computing"
+  ],
+  "Polaris": [
+    "https://www.fr0ntierx.com/polaris"
+  ]
+}
