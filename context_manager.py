@@ -110,9 +110,7 @@ def create_default_context() -> Dict:
     now = datetime.now().isoformat()
     return {
         "company_name": "",
-        "core_tech": [],
-        "value_props": [],
-        "positioning": [],
+        "company_context": "",
         "created": now,
         "last_updated": now,
     }
@@ -183,20 +181,11 @@ def render_context_editor(context_manager: ContextManager, context_name: Optiona
 
         company_name = st.text_input("Company Name:", value=context_data.get("company_name", ""))
 
-        core_tech_lines = st.text_area(
-            "Core Technologies (one per line)",
-            value="\n".join(context_data.get("core_tech", [])),
-            height=120,
-        )
-        value_props_lines = st.text_area(
-            "Value Propositions (one per line)",
-            value="\n".join(context_data.get("value_props", [])),
-            height=120,
-        )
-        positioning_lines = st.text_area(
-            "Positioning (one per line)",
-            value="\n".join(context_data.get("positioning", [])),
-            height=120,
+        company_context_text = st.text_area(
+            "Company Context (general background, tone, priorities, examples)",
+            value=context_data.get("company_context", ""),
+            height=220,
+            help="Add any information that should guide blog writing: background, tone, audience, do's/don'ts, themes, sample phrasing, etc.",
         )
 
         st.write("---")
@@ -210,9 +199,7 @@ def render_context_editor(context_manager: ContextManager, context_name: Optiona
                 final_name = company_name.strip()
                 updated = {
                     "company_name": final_name,
-                    "core_tech": [l.strip() for l in core_tech_lines.splitlines() if l.strip()],
-                    "value_props": [l.strip() for l in value_props_lines.splitlines() if l.strip()],
-                    "positioning": [l.strip() for l in positioning_lines.splitlines() if l.strip()],
+                    "company_context": company_context_text.strip(),
                 }
                 context_manager.save_context(final_name, updated, workspace_key)
                 st.success(f"Saved '{final_name}'!")

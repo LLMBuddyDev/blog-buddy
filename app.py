@@ -210,13 +210,14 @@ def match_links_to_keywords(tagged_pool, keywords):
 
 def build_prompt(avg_read, kw_guidance, tfidf_keywords, user_additional_info, format_summary,
                  news_links, authority_links, solution_links,
-                 core_tech_list, value_props_list, positioning_list):
+                 company_context_text: str):
     template = load_prompt_template()
     kw_lines = "\n".join([f"- {kw}: {share}" for kw, share in kw_guidance])
     tfidf_lines = "\n".join([f"- {kw} (priority keyword)" for kw, _ in tfidf_keywords])
-    core_tech_lines = "\n".join([f"- {ct}" for ct in core_tech_list])
-    value_props_lines = "\n".join([f"- {vp}" for vp in value_props_list])
-    positioning_lines = "\n".join([f"- {pos}" for pos in positioning_list])
+    # Backward template compatibility: we pass the general context into all three legacy slots
+    core_tech_lines = company_context_text
+    value_props_lines = company_context_text
+    positioning_lines = company_context_text
 
     return template.format(
         kw_lines=kw_lines,
@@ -252,7 +253,7 @@ def copy_to_clipboard_component(blog_html):
     """, height=60)
 
 # -------------------- BLOG GENERATOR --------------------
-def analyze_and_generate(comp_urls, tech_urls, user_additional_info, core_tech_list, value_props_list, positioning_list, topic=None):
+def analyze_and_generate(comp_urls, tech_urls, user_additional_info, company_context_text, topic=None):
     read_scores, article_texts, kw_counter, formats = [], [], Counter(), []
 
     for url in comp_urls:
@@ -296,9 +297,7 @@ def analyze_and_generate(comp_urls, tech_urls, user_additional_info, core_tech_l
         news_links,
         authority_links,
         solution_links,
-        core_tech_list,
-        value_props_list,
-        positioning_list,
+        company_context_text,
     )
 
     # … after you’ve built your prompt …
@@ -403,9 +402,7 @@ if mode == "Long Blog Generator":
                 comp_urls,
                 tech_urls,
                 extra_info.strip(),
-                current_context.get("core_tech", []),
-                current_context.get("value_props", []),
-                current_context.get("positioning", []),
+                current_context.get("company_context", ""),
                 topic,
             )
 
