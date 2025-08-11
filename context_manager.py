@@ -182,10 +182,10 @@ def render_context_editor(context_manager: ContextManager, context_name: Optiona
         company_name = st.text_input("Company Name:", value=context_data.get("company_name", ""))
 
         company_context_text = st.text_area(
-            "Company Context (general background, tone, priorities, examples)",
+            "Company Context (paragraph form)",
             value=context_data.get("company_context", ""),
-            height=220,
-            help="Add any information that should guide blog writing: background, tone, audience, do's/don'ts, themes, sample phrasing, etc.",
+            height=260,
+            help="Add general background, tone, priorities, examples, and any guidance that should inform blog writing.",
         )
 
         st.write("---")

@@ -15,14 +15,8 @@ When writing the **Final 25% section**, where you discuss how risks could be add
 - Discuss a variety of relevant technical solutions (e.g., confidential computing, zero-trust architectures, secure enclaves, key attestation, blockchain).
 - Keep the discussion vendor-neutral and technically accurate.
 
-Use the following contextual guidance where relevant (if provided by the user/company context):
-{core_tech_lines}
-
-Reflect these strategic priorities/value points:
-{value_props_lines}
-
-Align with these positioning statements:
-{positioning_lines}
+Company context and guidance:
+{company_context}
 
 Take special care to reflect any style, tone, or content requests in the following section, including informal tone, humor, formatting (like emojis), or examples: {user_additional_info}
 

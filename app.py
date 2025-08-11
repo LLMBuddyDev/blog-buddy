@@ -214,17 +214,11 @@ def build_prompt(avg_read, kw_guidance, tfidf_keywords, user_additional_info, fo
     template = load_prompt_template()
     kw_lines = "\n".join([f"- {kw}: {share}" for kw, share in kw_guidance])
     tfidf_lines = "\n".join([f"- {kw} (priority keyword)" for kw, _ in tfidf_keywords])
-    # Backward template compatibility: we pass the general context into all three legacy slots
-    core_tech_lines = company_context_text
-    value_props_lines = company_context_text
-    positioning_lines = company_context_text
 
     return template.format(
         kw_lines=kw_lines,
         tfidf_lines=tfidf_lines,
-        core_tech_lines=core_tech_lines,
-        value_props_lines=value_props_lines,
-        positioning_lines=positioning_lines,
+        company_context=company_context_text,
         user_additional_info=user_additional_info,
         format_summary=format_summary,
         news_links=", ".join([f"[{url}]({url})" for url in news_links]),
