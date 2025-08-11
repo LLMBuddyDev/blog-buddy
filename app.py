@@ -2,7 +2,6 @@
 
 import os
 import streamlit as st
-from newspaper import Article
 from collections import Counter
 import textstat, requests, re, openai, json
 from bs4 import BeautifulSoup
@@ -18,8 +17,15 @@ with open("technical_links.json") as f:
 sorted_keywords = sorted(keyword_map.keys(), key=len, reverse=True)
 
 from company_config import (
-    openai_api_key, company_name, core_tech, value_props, positioning,
-    google_api_key, google_cx
+    openai_api_key,
+    google_api_key,
+    google_cx,
+)
+from context_manager import (
+    ContextManager,
+    get_workspace_key,
+    render_context_selector,
+    render_context_editor,
 )
 
 openai.api_key = openai_api_key
@@ -98,14 +104,35 @@ def scrape_article_text(url):
         response = requests.get(url, headers=headers, timeout=10)
         response.raise_for_status()
 
-        article = Article(url)
-        article.set_html(response.text)
-        article.parse()
+        # Try newspaper3k if available
+        try:
+            from newspaper import Article  # lazy import to avoid import-time failures
+            article = Article(url)
+            article.set_html(response.text)
+            article.parse()
+            text = article.text.strip()
+            if len(text) >= 100:
+                return text
+        except Exception:
+            pass
 
-        if len(article.text.strip()) < 100:
+        # Fallback: extract main text via BeautifulSoup heuristics
+        soup = BeautifulSoup(response.text, "html.parser")
+        # Remove script/style
+        for tag in soup(["script", "style", "noscript"]):
+            tag.extract()
+        # Prefer <article> content
+        article_tag = soup.find("article")
+        if article_tag:
+            text = "\n".join(p.get_text(strip=True) for p in article_tag.find_all("p"))
+        else:
+            text = "\n".join(p.get_text(strip=True) for p in soup.find_all("p"))
+
+        text = text.strip()
+        if len(text) < 100:
             st.warning(f"Article parsed but too short: {url}")
             return None
-        return article.text
+        return text
 
     except Exception:
         return None
@@ -182,13 +209,14 @@ def match_links_to_keywords(tagged_pool, keywords):
     return list(set(matches))
 
 def build_prompt(avg_read, kw_guidance, tfidf_keywords, user_additional_info, format_summary,
-                 news_links, authority_links, solution_links):
+                 news_links, authority_links, solution_links,
+                 core_tech_list, value_props_list, positioning_list):
     template = load_prompt_template()
     kw_lines = "\n".join([f"- {kw}: {share}" for kw, share in kw_guidance])
     tfidf_lines = "\n".join([f"- {kw} (priority keyword)" for kw, _ in tfidf_keywords])
-    core_tech_lines = "\n".join([f"- {ct}" for ct in core_tech])
-    value_props_lines = "\n".join([f"- {vp}" for vp in value_props])
-    positioning_lines = "\n".join([f"- {pos}" for pos in positioning])
+    core_tech_lines = "\n".join([f"- {ct}" for ct in core_tech_list])
+    value_props_lines = "\n".join([f"- {vp}" for vp in value_props_list])
+    positioning_lines = "\n".join([f"- {pos}" for pos in positioning_list])
 
     return template.format(
         kw_lines=kw_lines,
@@ -224,7 +252,7 @@ def copy_to_clipboard_component(blog_html):
     """, height=60)
 
 # -------------------- BLOG GENERATOR --------------------
-def analyze_and_generate(comp_urls, tech_urls, user_additional_info, topic=None):
+def analyze_and_generate(comp_urls, tech_urls, user_additional_info, core_tech_list, value_props_list, positioning_list, topic=None):
     read_scores, article_texts, kw_counter, formats = [], [], Counter(), []
 
     for url in comp_urls:
@@ -259,8 +287,19 @@ def analyze_and_generate(comp_urls, tech_urls, user_additional_info, topic=None)
     # Fr0ntierX-links logic removed:
     solution_links = authority_links[:3]
 
-    prompt = build_prompt(avg_read, kw_guidance, tfidf_keywords, user_additional_info,
-                          format_summary, news_links, authority_links, solution_links)
+    prompt = build_prompt(
+        avg_read,
+        kw_guidance,
+        tfidf_keywords,
+        user_additional_info,
+        format_summary,
+        news_links,
+        authority_links,
+        solution_links,
+        core_tech_list,
+        value_props_list,
+        positioning_list,
+    )
 
     # … after you’ve built your prompt …
     raw_blog = call_openai(prompt)
@@ -308,7 +347,15 @@ mode = st.radio(
 )
 
 if mode == "Long Blog Generator":
-    st.title(f"{company_name} BlogBuddy")
+    # Workspace and context login/selection
+    workspace_key = get_workspace_key()
+    if 'context_manager' not in st.session_state:
+        st.session_state.context_manager = ContextManager()
+    selected_context_name = render_context_selector(st.session_state.context_manager)
+    current_context = render_context_editor(st.session_state.context_manager, selected_context_name)
+
+    active_company_name = (current_context or {}).get("company_name", "Your Company")
+    st.title(f"{active_company_name} BlogBuddy")
     sub_mode = st.radio(
         "Choose input mode:",
         ["Automatic (Google search + optional URLs)", "Manual (only manual URLs)"],
@@ -342,6 +389,9 @@ if mode == "Long Blog Generator":
 
     # Generate button for long blogs
     if st.button("Generate Blog", key="generate_long"):
+        if not current_context:
+            st.warning("Please create and select a company context first.")
+            st.stop()
         manual_urls = [u.strip() for u in manual_urls_box.splitlines() if u.strip()]
         tech_urls   = [u.strip() for u in tech_box.splitlines()   if u.strip()]
         comp_urls   = (google_search_urls(topic) + manual_urls) if ("Auto" in sub_mode and topic) else manual_urls
@@ -349,11 +399,27 @@ if mode == "Long Blog Generator":
         if not comp_urls:
             st.warning("No competitor URLs to analyze.")
         else:
-            analyze_and_generate(comp_urls, tech_urls, extra_info.strip(), topic)
+            analyze_and_generate(
+                comp_urls,
+                tech_urls,
+                extra_info.strip(),
+                current_context.get("core_tech", []),
+                current_context.get("value_props", []),
+                current_context.get("positioning", []),
+                topic,
+            )
 
 
 elif mode == "Short Blog Generator":
-    st.title(f"{company_name} Short Blog Generator")
+    # Workspace and context login/selection
+    workspace_key = get_workspace_key()
+    if 'context_manager' not in st.session_state:
+        st.session_state.context_manager = ContextManager()
+    selected_context_name = render_context_selector(st.session_state.context_manager)
+    current_context = render_context_editor(st.session_state.context_manager, selected_context_name)
+
+    active_company_name = (current_context or {}).get("company_name", "Your Company")
+    st.title(f"{active_company_name} Short Blog Generator")
 
     # ────── session‐state initialization ──────
     if "scrape_failed" not in st.session_state:

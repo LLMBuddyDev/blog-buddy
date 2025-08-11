@@ -34,6 +34,8 @@ cp .streamlit/secrets.toml.template .streamlit/secrets.toml
 streamlit run app.py
 ```
 
+On first run, you'll be asked for a Workspace Key. Use any memorable string; it keys and isolates your saved company contexts under `user_contexts/`.
+
 ## Deploy to Streamlit Community Cloud (recommended)
 
 1. Push this repo to GitHub
@@ -70,4 +72,5 @@ Procfile is included and will run Streamlit on the assigned port.
 
 - Secrets are loaded from env vars or Streamlit secrets via `company_config.py`
 - Keep `blog_prompt_template.txt` and `technical_links.json` in the repo root for the app to find them
+- Company contexts are stored per workspace key in `user_contexts/` (ignored by Git)
 

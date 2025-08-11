@@ -24,3 +24,6 @@ venv/
 # Streamlit secrets (do NOT commit real secrets)
 .streamlit/secrets.toml
 
+# App data
+user_contexts/
+
