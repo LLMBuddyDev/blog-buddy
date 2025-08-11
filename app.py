@@ -349,6 +349,10 @@ if mode == "Long Blog Generator":
 
     active_company_name = (current_context or {}).get("company_name", "Your Company")
     st.title(f"{active_company_name} BlogBuddy")
+    with st.expander("Instructions", expanded=False):
+        st.write(
+            "BlogBuddy has two modes: automatic and manual. In automatic mode, BlogBuddy will automatically research and source top URLs on any subject that you enter. You can also add additional URLs in the sections below. In manual mode, you choose the URLs yourself."
+        )
     sub_mode = st.radio(
         "Choose input mode:",
         ["Automatic (Google search + optional URLs)", "Manual (only manual URLs)"],
