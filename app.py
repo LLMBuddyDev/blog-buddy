@@ -1,6 +1,7 @@
 # app.py
 
 import os
+import sqlite3
 import streamlit as st
 from collections import Counter
 import textstat, requests, re, openai, json
@@ -8,6 +9,7 @@ from bs4 import BeautifulSoup
 from sklearn.feature_extraction.text import TfidfVectorizer
 import streamlit.components.v1 as components
 import markdown as md
+import pandas as pd
 
 import json
 
@@ -475,3 +477,89 @@ Only return the final formatted result.
 
             # 6) Show the same “Copy Formatted Blog” button you have in Long mode
             copy_to_clipboard_component(blog_html)
+
+else:
+    # Trending mode (read-only MVP with SQLite)
+    st.title("Trending posts (last 72h)")
+
+    db_path = os.getenv("BLOGBUDDY_DB", "data.db")
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS watchlist (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            profile_url TEXT UNIQUE,
+            display_name TEXT,
+            max_per_crawl INTEGER DEFAULT 10,
+            freq_hours INTEGER DEFAULT 24,
+            last_crawled_at TEXT,
+            status TEXT DEFAULT 'active'
+        );
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS posts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            profile_id INTEGER,
+            post_url TEXT UNIQUE,
+            posted_at TEXT,
+            reactions INTEGER,
+            comments INTEGER,
+            snippet TEXT,
+            fetched_at TEXT
+        );
+        """
+    )
+    conn.commit()
+
+    with st.sidebar:
+        st.header("Add profile")
+        new_url = st.text_input("LinkedIn posts URL (…/recent-activity/shares/)")
+        new_name = st.text_input("Display name (optional)")
+        if st.button("Add to watchlist") and new_url:
+            try:
+                conn.execute(
+                    "INSERT OR IGNORE INTO watchlist(profile_url, display_name, status, max_per_crawl, freq_hours) VALUES(?, ?, 'active', 10, 24)",
+                    (new_url.strip(), new_name.strip() or None),
+                )
+                conn.commit()
+                st.success("Added!")
+            except Exception as e:
+                st.error(f"Could not add: {e}")
+
+    query = (
+        """
+        SELECT p.post_url, p.reactions, p.comments, p.snippet, p.posted_at, p.fetched_at
+        FROM posts p
+        WHERE p.posted_at >= datetime('now','-72 hours')
+        ORDER BY (p.reactions + p.comments) * 1.0 / (JULIANDAY('now') - JULIANDAY(p.posted_at) + 0.02) DESC
+        LIMIT 50;
+        """
+    )
+    try:
+        df = pd.read_sql_query(query, conn)
+    except Exception:
+        df = pd.DataFrame()
+
+    def _age_hours(ts: str) -> float:
+        import datetime as _dt
+        try:
+            return max(0.5, (_dt.datetime.utcnow() - _dt.datetime.fromisoformat(ts)).total_seconds() / 3600.0)
+        except Exception:
+            return 1.0
+
+    if not df.empty:
+        df["score"] = (df["reactions"].fillna(0) + df["comments"].fillna(0)) / df["posted_at"].fillna("").apply(_age_hours)
+        st.dataframe(df[["post_url", "reactions", "comments", "score", "snippet", "posted_at"]])
+    else:
+        st.info("No posts yet—crawler will populate this once it runs. Use the sidebar to add profiles to your watchlist.")
+
+    with st.expander("Status"):
+        try:
+            wl = pd.read_sql_query("SELECT profile_url, display_name, status, last_crawled_at FROM watchlist ORDER BY id DESC", conn)
+            st.write("Watchlist:")
+            st.dataframe(wl)
+        except Exception:
+            st.write("No watchlist entries yet.")
+    conn.close()
